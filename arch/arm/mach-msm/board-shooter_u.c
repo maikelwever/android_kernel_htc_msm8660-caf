@@ -2220,6 +2220,15 @@ static struct ion_platform_heap shooter_heaps[] = {
 		.memory_type = ION_EBI_TYPE,
 		.extra_data = (void *) &co_ion_pdata,
 	},
+	{
+		.id	= ION_AUDIO_HEAP_ID,
+		.type	= ION_HEAP_TYPE_CARVEOUT,
+		.name	= ION_AUDIO_HEAP_NAME,
+		.base	= MSM_ION_AUDIO_BASE,
+		.size	= MSM_ION_AUDIO_SIZE,
+		.memory_type = ION_EBI_TYPE,
+		.extra_data = (void *) &co_ion_pdata,
+	},
 };
 
 static struct ion_platform_data ion_pdata = {

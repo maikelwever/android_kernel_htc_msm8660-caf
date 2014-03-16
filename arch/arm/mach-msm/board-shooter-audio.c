@@ -1,6 +1,7 @@
-/* linux/arch/arm/mach-msm/board-spade-audio.c
+/* linux/arch/arm/mach-msm/board-shooter-audio.c
  *
  * Copyright (C) 2010-2011 HTC Corporation.
+ * Copyright (C) 2014 Dorian Snyder <dastin1015@gmail.com>
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -16,43 +17,50 @@
 #include <linux/android_pmem.h>
 #include <mach/gpio.h>
 #include <linux/mfd/pmic8058.h>
-#include <linux/mfd/marimba.h>
 #include <linux/delay.h>
 #include <linux/pmic8058-othc.h>
 #include <linux/spi/spi_aic3254.h>
+#include <linux/regulator/consumer.h>
 
 #include <mach/dal.h>
 #include <mach/tpa2051d3.h>
-#include <mach/qdsp6v3/snddev_icodec.h>
-#include <mach/qdsp6v3/snddev_ecodec.h>
-#include <mach/qdsp6v3/snddev_hdmi.h>
+#include "qdsp6v2/snddev_icodec.h"
+#include "qdsp6v2/snddev_ecodec.h"
+#include "qdsp6v2/snddev_hdmi.h"
+#include <mach/qdsp6v2/audio_dev_ctl.h>
+#include <sound/apr_audio.h>
+#include <sound/q6asm.h>
 #include <mach/htc_acoustic_8x60.h>
-#include "board-shooter.h"
-#include "board-shooter-audio-data.h"
-#include <mach/qdsp6v3/audio_dev_ctl.h>
+#include <mach/board_htc.h>
 
-static struct mutex bt_sco_lock;
-static struct mutex mic_lock;
-static int curr_rx_mode;
-static atomic_t aic3254_ctl = ATOMIC_INIT(0);
+#include "board-shooter.h"
+
+#define PM8058_GPIO_BASE			NR_MSM_GPIOS
+#define PM8058_GPIO_PM_TO_SYS(pm_gpio)		(pm_gpio + PM8058_GPIO_BASE)
 
 #define BIT_SPEAKER	(1 << 0)
 #define BIT_HEADSET	(1 << 1)
 #define BIT_RECEIVER	(1 << 2)
 #define BIT_FM_SPK	(1 << 3)
 #define BIT_FM_HS	(1 << 4)
-#define PM8058_GPIO_BASE			NR_MSM_GPIOS
-#define PM8058_GPIO_PM_TO_SYS(pm_gpio)		(pm_gpio + PM8058_GPIO_BASE)
+
 void shooter_snddev_bmic_pamp_on(int en);
+
 static uint32_t msm_snddev_gpio[] = {
 	GPIO_CFG(108, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
 	GPIO_CFG(109, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
 	GPIO_CFG(110, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
 };
+
 static uint32_t msm_aic3254_reset_gpio[] = {
 	GPIO_CFG(SHOOTER_AUD_CODEC_RST, 0,
 		GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
 };
+
+static struct mutex mic_lock;
+static atomic_t q6_effect_mode = ATOMIC_INIT(-1);
+static int curr_rx_mode;
+static atomic_t aic3254_ctl = ATOMIC_INIT(0);
 
 void shooter_snddev_poweramp_on(int en)
 {
@@ -69,6 +77,14 @@ void shooter_snddev_poweramp_on(int en)
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SHOOTER_AUD_SPK_ENO), 0);
 		if (!atomic_read(&aic3254_ctl))
 			curr_rx_mode &= ~BIT_SPEAKER;
+	}
+}
+
+void shooter_snddev_usb_headset_pamp_on(int en)
+{
+	pr_aud_info("%s %d\n", __func__, en);
+	if (en) {
+	} else {
 	}
 }
 
@@ -132,12 +148,6 @@ void shooter_snddev_receiver_pamp_on(int en)
 	}
 }
 
-void shooter_snddev_bt_sco_pamp_on(int en)
-{
-	/* to be implemented */
-}
-
-/* power on/off externnal mic bias */
 void shooter_mic_enable(int en, int shift)
 {
 	pr_aud_info("%s: %d, shift %d\n", __func__, en, shift);
@@ -194,17 +204,6 @@ void shooter_snddev_bmic_pamp_on(int en)
 		ret = pm8058_micbias_enable(OTHC_MICBIAS_1, OTHC_SIGNAL_OFF);
 		if (ret)
 			pr_aud_err("%s: Enabling back mic power failed\n", __func__);
-
-	}
-}
-
-void shooter_snddev_emic_pamp_on(int en)
-{
-	pr_aud_info("%s %d\n", __func__, en);
-
-	if (en) {
-		/* select external mic path */
-		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SHOOTER_AUD_MIC_SEL), 1);
 	}
 }
 
@@ -230,17 +229,25 @@ void shooter_snddev_stereo_mic_pamp_on(int en)
 		if (ret)
 			pr_aud_err("%s: Disabling int mic power failed\n", __func__);
 
-
 		ret = pm8058_micbias_enable(OTHC_MICBIAS_1, OTHC_SIGNAL_OFF);
 		if (ret)
 			pr_aud_err("%s: Disabling back mic power failed\n", __func__);
 	}
 }
 
+void shooter_snddev_emic_pamp_on(int en)
+{
+	pr_aud_info("%s %d\n", __func__, en);
+
+	if (en) {
+		gpio_direction_output(PM8058_GPIO_PM_TO_SYS(SHOOTER_AUD_MIC_SEL), 1);
+	}
+}
 
 void shooter_snddev_fmspk_pamp_on(int en)
 {
 	pr_aud_info("%s %d\n", __func__, en);
+
 	if (en) {
 		msleep(50);
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SHOOTER_AUD_SPK_ENO), 1);
@@ -257,11 +264,11 @@ void shooter_snddev_fmspk_pamp_on(int en)
 void shooter_snddev_fmhs_pamp_on(int en)
 {
 	pr_aud_info("%s %d\n", __func__, en);
+
 	if (en) {
 		msleep(50);
 		gpio_set_value(PM8058_GPIO_PM_TO_SYS(SHOOTER_AUD_HANDSET_ENO), 1);
 		set_headset_amp(1);
-
 		if (!atomic_read(&aic3254_ctl))
 			curr_rx_mode |= BIT_FM_HS;
 		msleep(5);
@@ -273,20 +280,8 @@ void shooter_snddev_fmhs_pamp_on(int en)
 	}
 }
 
-void shooter_voltage_on (int en)
+void shooter_voltage_on(int en)
 {
-	/* to be implemented */
-}
-
-int shooter_get_rx_vol(uint8_t hw, int network, int level)
-{
-	int vol = 0;
-
-	/* to be implemented */
-
-	pr_aud_info("%s(%d, %d, %d) => %d\n", __func__, hw, network, level, vol);
-
-	return vol;
 }
 
 void shooter_rx_amp_enable(int en)
@@ -305,13 +300,18 @@ void shooter_rx_amp_enable(int en)
 			shooter_snddev_fmspk_pamp_on(en);
 		if (curr_rx_mode & BIT_FM_HS)
 			shooter_snddev_fmhs_pamp_on(en);
-		atomic_set(&aic3254_ctl, 0);;
+		atomic_set(&aic3254_ctl, 0);
 	}
 }
 
-int shooter_support_aic3254(void)
+int shooter_get_speaker_channels(void)
 {
 	return 1;
+}
+
+int shooter_support_adie(void)
+{
+	return 0;
 }
 
 int shooter_support_back_mic(void)
@@ -319,9 +319,8 @@ int shooter_support_back_mic(void)
 	return 1;
 }
 
-int shooter_is_msm_i2s_slave(void)
+int shooter_support_aic3254(void)
 {
-	/* 1 - CPU slave, 0 - CPU master */
 	return 1;
 }
 
@@ -363,47 +362,47 @@ void shooter_reset_3254(void)
 	gpio_set_value(SHOOTER_AUD_CODEC_RST, 1);
 }
 
+void shooter_set_q6_effect_mode(int mode)
+{
+	pr_aud_info("%s: mode %d\n", __func__, mode);
+	atomic_set(&q6_effect_mode, mode);
+}
+
+int shooter_get_q6_effect_mode(void)
+{
+	int mode = atomic_read(&q6_effect_mode);
+	pr_aud_info("%s: mode %d\n", __func__, mode);
+	return mode;
+}
+
 static struct q6v2audio_analog_ops ops = {
 	.speaker_enable	        = shooter_snddev_poweramp_on,
 	.headset_enable	        = shooter_snddev_hsed_pamp_on,
 	.handset_enable	        = shooter_snddev_receiver_pamp_on,
 	.headset_speaker_enable	= shooter_snddev_hs_spk_pamp_on,
-	.bt_sco_enable	        = shooter_snddev_bt_sco_pamp_on,
 	.int_mic_enable         = shooter_snddev_imic_pamp_on,
 	.back_mic_enable        = shooter_snddev_bmic_pamp_on,
 	.ext_mic_enable         = shooter_snddev_emic_pamp_on,
-	.stereo_mic_enable      = shooter_snddev_stereo_mic_pamp_on,
 	.fm_headset_enable      = shooter_snddev_fmhs_pamp_on,
 	.fm_speaker_enable      = shooter_snddev_fmspk_pamp_on,
-	.voltage_on		= shooter_voltage_on,
-};
-
-static struct q6v2audio_icodec_ops iops = {
-	.support_aic3254 = shooter_support_aic3254,
-	.is_msm_i2s_slave = shooter_is_msm_i2s_slave,
-};
-
-static struct q6v2audio_ecodec_ops eops = {
-	.bt_sco_enable  = shooter_snddev_bt_sco_pamp_on,
+	.stereo_mic_enable      = shooter_snddev_stereo_mic_pamp_on,
+	.usb_headset_enable     = shooter_snddev_usb_headset_pamp_on,
+	.voltage_on             = shooter_voltage_on,
 };
 
 static struct aic3254_ctl_ops cops = {
 	.rx_amp_enable        = shooter_rx_amp_enable,
 	.reset_3254           = shooter_reset_3254,
 	.spibus_enable        = shooter_spibus_enable,
-	.lb_dsp_init          = &LOOPBACK_DSP_INIT_PARAM,
-	.lb_receiver_imic     = &LOOPBACK_Receiver_IMIC_PARAM,
-	.lb_speaker_imic      = &LOOPBACK_Speaker_IMIC_PARAM,
-	.lb_headset_emic      = &LOOPBACK_Headset_EMIC_PARAM,
-	.lb_receiver_bmic     = &LOOPBACK_Receiver_BMIC_PARAM,
-	.lb_speaker_bmic      = &LOOPBACK_Speaker_BMIC_PARAM,
-	.lb_headset_bmic      = &LOOPBACK_Headset_BMIC_PARAM,
 };
 
 static struct acoustic_ops acoustic = {
 	.enable_mic_bias = shooter_mic_enable,
+	.support_adie = shooter_support_adie,
 	.support_aic3254 = shooter_support_aic3254,
 	.support_back_mic = shooter_support_back_mic,
+	.get_speaker_channels = shooter_get_speaker_channels,
+	.set_q6_effect = shooter_set_q6_effect_mode,
 };
 
 void shooter_aic3254_set_mode(int config, int mode)
@@ -411,31 +410,33 @@ void shooter_aic3254_set_mode(int config, int mode)
 	aic3254_set_mode(config, mode);
 }
 
-
 static struct q6v2audio_aic3254_ops aops = {
        .aic3254_set_mode = shooter_aic3254_set_mode,
 };
 
+static struct q6asm_ops qops = {
+	.get_q6_effect = shooter_get_q6_effect_mode,
+};
+
+void shooter_audio_gpios_init(void)
+{
+	pr_aud_info("%s\n", __func__);
+	gpio_request(PM8058_GPIO_PM_TO_SYS(SHOOTER_AUD_HANDSET_ENO), "AUD_HANDSET_ENO");
+	gpio_request(PM8058_GPIO_PM_TO_SYS(SHOOTER_AUD_MIC_SEL), "AUD_MIC_SEL");
+}
+
 void __init shooter_audio_init(void)
 {
-
-	mutex_init(&bt_sco_lock);
 	mutex_init(&mic_lock);
 
-#ifdef CONFIG_MSM8X60_AUDIO
 	pr_aud_info("%s\n", __func__);
-
 	htc_8x60_register_analog_ops(&ops);
-	htc_8x60_register_icodec_ops(&iops);
-	htc_8x60_register_ecodec_ops(&eops);
+	htc_register_q6asm_ops(&qops);
 	acoustic_register_ops(&acoustic);
 	htc_8x60_register_aic3254_ops(&aops);
 	msm_set_voc_freq(8000, 8000);
-#endif
 	aic3254_register_ctl_ops(&cops);
-
-	/* PMIC GPIO Init (See board-shooter.c) */
-	/* Reset AIC3254 */
+	shooter_audio_gpios_init();
 	shooter_reset_3254();
 	gpio_tlmm_config(
 		GPIO_CFG(SHOOTER_AUD_CDC_LDO_SEL, 0, GPIO_CFG_OUTPUT,
@@ -445,4 +446,3 @@ void __init shooter_audio_init(void)
 	gpio_tlmm_config(msm_snddev_gpio[2], GPIO_CFG_DISABLE);
 
 }
-

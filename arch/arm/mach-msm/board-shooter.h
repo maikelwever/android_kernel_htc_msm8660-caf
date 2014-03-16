@@ -28,9 +28,8 @@
 
 // PMEM
 #define MSM_PMEM_ADSP_SIZE      0x1A00000
-#define MSM_PMEM_AUDIO_SIZE     0x300000
 
-#define MSM_ION_HEAP_NUM        6
+#define MSM_ION_HEAP_NUM        7
 
 // ION
 #define MSM_ION_MM_FW_SIZE      0x200000
@@ -39,17 +38,18 @@
 #define MSM_ION_SF_SIZE         0x2B00000
 #define MSM_ION_SMI_SIZE        0x3600000
 #define MSM_ION_WB_SIZE         0x600000
+#define MSM_ION_AUDIO_SIZE      0x4CF000
 
 // Memory bases
 #define MSM_PMEM_ADSP_BASE      0x40400000
 #define MSM_FB_BASE             0x41E00000
 #define MSM_ION_WB_BASE         0x42800000
-#define MSM_PMEM_AUDIO_BASE     0x46400000
 #ifdef CONFIG_MACH_SHOOTER_CT
 #define MSM_ION_SF_BASE         (PHY_BASE_ADDR1+0x1800000)
 #else
 #define MSM_ION_SF_BASE         0x49800000
 #endif
+#define MSM_ION_AUDIO_BASE    0x6C500000
 #define MSM_ION_SMI_BASE        0x7CA00000
 #define MSM_ION_MM_FW_BASE      0x7CA00000
 #define MSM_ION_MM_BASE         0x7CC00000
@@ -78,7 +78,7 @@
 #define SIZE_ADDR1              0x34200000
 #else
 #define PHY_BASE_ADDR1          0x48000000
-#define SIZE_ADDR1              0x34A00000
+#define SIZE_ADDR1              0x24500000
 #endif
 
 /* GPIO definition */
