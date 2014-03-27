@@ -375,6 +375,11 @@ int shooter_get_q6_effect_mode(void)
 	return mode;
 }
 
+void shooter_get_acoustic_tables(struct acoustic_tables *tb)
+{
+	strcpy(tb->aic3254,	"IOTable.txt\0");
+}
+
 static struct q6v2audio_analog_ops ops = {
 	.speaker_enable	        = shooter_snddev_poweramp_on,
 	.headset_enable	        = shooter_snddev_hsed_pamp_on,
@@ -403,6 +408,7 @@ static struct acoustic_ops acoustic = {
 	.support_back_mic = shooter_support_back_mic,
 	.get_speaker_channels = shooter_get_speaker_channels,
 	.set_q6_effect = shooter_set_q6_effect_mode,
+	.get_acoustic_tables = shooter_get_acoustic_tables,
 };
 
 void shooter_aic3254_set_mode(int config, int mode)
