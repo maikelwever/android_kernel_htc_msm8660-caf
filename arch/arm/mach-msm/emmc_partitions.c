@@ -54,9 +54,6 @@ struct msm_ptbl_entry {
 static struct mtd_partition msm_nand_partitions[MSM_MAX_PARTITIONS];
 static char msm_nand_names[MSM_MAX_PARTITIONS * 16];
 
-extern struct flash_platform_data msm_nand_data;
-extern int get_partition_num_by_name(char *name);
-
 int emmc_partition_read_proc(char *page, char **start, off_t off,
 			   int count, int *eof, void *data)
 {
@@ -88,6 +85,19 @@ int get_partition_num_by_name(char *name)
 	return -1;
 }
 EXPORT_SYMBOL(get_partition_num_by_name);
+
+const char *get_partition_name_by_num(int partnum)
+{
+	struct mtd_partition *ptn = msm_nand_partitions;
+	int i;
+
+	for (i = 0; i < MSM_MAX_PARTITIONS && ptn->name; i++, ptn++) {
+		if (ptn->offset == partnum)
+			return ptn->name;
+	}
+	return NULL;
+}
+EXPORT_SYMBOL(get_partition_name_by_num);
 
 extern char devlog_part[64];
 static int __init parse_tag_msm_partition(const struct tag *tag)

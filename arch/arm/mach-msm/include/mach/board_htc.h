@@ -105,6 +105,10 @@ struct t_usb_status_notifier{
 void reset_dflipflop(void);
 #endif
 
+extern struct flash_platform_data msm_nand_data;
+extern int get_partition_num_by_name(char *name);
+extern const char *get_partition_name_by_num(int partnum);
+
 int __init board_mfg_mode(void);
 int __init parse_tag_smi(const struct tag *tags);
 int __init parse_tag_hwid(const struct tag * tags);
