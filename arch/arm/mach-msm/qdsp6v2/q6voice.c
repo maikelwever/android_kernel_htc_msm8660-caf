@@ -23,7 +23,6 @@
 #include <linux/wait.h>
 #include <linux/mutex.h>
 #include <linux/delay.h>
-
 #include <mach/qdsp6v2/audio_dev_ctl.h>
 #include <mach/dal.h>
 #include <mach/qdsp6v2/q6voice.h>
