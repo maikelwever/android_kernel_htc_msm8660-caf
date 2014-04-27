@@ -72,7 +72,6 @@ enum cp_mem_usage {
 /**
  * Flag to use when allocating to indicate that a heap is secure.
  */
-#define ION_SECURE (1 << ION_HEAP_ID_RESERVED)
 #define ION_FLAG_SECURE (1 << ION_HEAP_ID_RESERVED)
 
 /**
@@ -80,7 +79,13 @@ enum cp_mem_usage {
  *
  * Use of this flag is carefully monitored!
  */
-#define ION_FORCE_CONTIGUOUS (1 << 30)
+#define ION_FLAG_FORCE_CONTIGUOUS (1 << 30)
+
+/**
+* Deprecated! Please use the corresponding ION_FLAG_*
+*/
+#define ION_SECURE ION_FLAG_SECURE
+#define ION_FORCE_CONTIGUOUS ION_FLAG_FORCE_CONTIGUOUS
 
 /**
  * Macro should be used with ion_heap_ids defined above.
@@ -160,7 +165,6 @@ struct ion_cp_heap_pdata {
 	size_t secure_size; /* Size used for securing heap when heap is shared*/
 	int reusable;
 	int mem_is_fmem;
-	int is_cma;
 	enum ion_fixed_position fixed_position;
 	int iommu_map_all;
 	int iommu_2x_map_domain;

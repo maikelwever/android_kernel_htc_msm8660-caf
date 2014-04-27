@@ -462,22 +462,44 @@ RO_PMEM_ATTR(free_quanta);
 
 static ssize_t show_pmem_bits_allocated(int id, char *buf)
 {
-	ssize_t ret;
+	ssize_t ret = 0;
 	unsigned int i;
+	int		used_in_Kb = 0;
+	int		total_used_in_Kb = 0;
 
 	mutex_lock(&pmem[id].arena_mutex);
 
-	ret = scnprintf(buf, PAGE_SIZE,
-		"id: %d\nbitnum\tindex\tquanta allocated\n", id);
+	ret += scnprintf(buf, PAGE_SIZE,
+		"id: %d\nbitnum\tindex\tquanta allocated\tin MB\n", id);
 
 	for (i = 0; i < pmem[id].allocator.bitmap.bitmap_allocs; i++)
+	{
 		if (pmem[id].allocator.bitmap.bitm_alloc[i].bit != -1)
+		{
+			used_in_Kb = pmem[id].allocator.bitmap.bitm_alloc[i].quanta * 4;
 			ret += scnprintf(buf + ret, PAGE_SIZE - ret,
-				"%u\t%u\t%u\n",
+				"%u\t%u\t%u\t\t\t%u.%3u\n",
 				i,
 				pmem[id].allocator.bitmap.bitm_alloc[i].bit,
-				pmem[id].allocator.bitmap.bitm_alloc[i].quanta
+				pmem[id].allocator.bitmap.bitm_alloc[i].quanta,
+				used_in_Kb / 1024,    // in MB
+				used_in_Kb % 1024 * 1000 / 1024
 				);
+			total_used_in_Kb += used_in_Kb;
+		}
+	}
+	ret += scnprintf(buf + ret, PAGE_SIZE - ret,
+		"Total usage: 0x%x (%u.%-3u MB)\n",
+		total_used_in_Kb*1024,
+		total_used_in_Kb / 1024,
+		total_used_in_Kb % 1024 * 1000 / 1024
+		);
+	ret += scnprintf(buf + ret, PAGE_SIZE - ret,
+		"Total allocated pmem size: 0x%lx (%lu.%-3lu MB)\n",
+		pmem[id].size,
+		pmem[id].size / 1024 / 1024,
+		pmem[id].size / 1024 % 1024 * 1000 / 1024
+		);
 
 	mutex_unlock(&pmem[id].arena_mutex);
 	return ret;
@@ -2340,6 +2362,16 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 						sizeof(struct pmem_region)))
 				return -EFAULT;
 			return pmem_remap(&region, file, PMEM_UNMAP);
+			break;
+		}
+	case PMEM_CACHE_FLUSH:
+		{
+			struct pmem_region region;
+			DLOG("flush\n");
+			if (copy_from_user(&region, (void __user *)arg,
+						sizeof(struct pmem_region)))
+				return -EFAULT;
+			flush_pmem_file(file, region.offset, region.len);
 			break;
 		}
 	case PMEM_GET_SIZE:

@@ -269,20 +269,24 @@ struct apr_svc *apr_register(char *dest, char *svc_name, apr_fn svc_fn,
 
 	if ((dest_id == APR_DEST_QDSP6) &&
 				(atomic_read(&dsp_state) == 0)) {
-		rc = wait_event_timeout(dsp_wait,
-				(atomic_read(&dsp_state) == 1), 5*HZ);
+		pr_info("%s: Wait for Lpass to bootup\n", __func__);
+		rc = wait_event_interruptible_timeout(dsp_wait,
+				(atomic_read(&dsp_state) == 1), (1 * HZ));
 		if (rc == 0) {
-			pr_aud_err("apr: Still dsp is not Up\n");
+			pr_err("%s: DSP is not Up\n", __func__);
 			return NULL;
 		}
+    pr_info("%s: Lpass Up\n", __func__);
 	} else if ((dest_id == APR_DEST_MODEM) &&
 					(atomic_read(&modem_state) == 0)) {
-		rc = wait_event_timeout(modem_wait,
-			(atomic_read(&modem_state) == 1), 5*HZ);
+		pr_info("%s: Wait for modem to bootup\n", __func__);
+    rc = wait_event_interruptible_timeout(modem_wait,
+			(atomic_read(&modem_state) == 1), (1 * HZ));
 		if (rc == 0) {
-			pr_aud_err("apr: Still Modem is not Up\n");
+			pr_err("%s: Modem is not Up\n", __func__);
 			return NULL;
 		}
+		pr_info("%s: modem Up\n", __func__);
 	}
 
 	if (!strcmp(svc_name, "AFE")) {
@@ -498,12 +502,19 @@ void apr_reset(void *handle)
 		return;
 	pr_debug("%s: handle[%p]\n", __func__, handle);
 
+	if (apr_reset_workqueue == NULL) {
+		pr_err("%s: apr_reset_workqueue is NULL\n", __func__);
+		return;
+	}
+
 	apr_reset_worker = kzalloc(sizeof(struct apr_reset_work),
-					GFP_ATOMIC);
-	if (apr_reset_worker == NULL || apr_reset_workqueue == NULL) {
+							GFP_ATOMIC);
+
+	if (apr_reset_worker == NULL) {
 		pr_aud_err("%s: mem failure\n", __func__);
 		return;
 	}
+
 	apr_reset_worker->handle = handle;
 	INIT_WORK(&apr_reset_worker->work, apr_reset_deregister);
 	queue_work(apr_reset_workqueue, &apr_reset_worker->work);

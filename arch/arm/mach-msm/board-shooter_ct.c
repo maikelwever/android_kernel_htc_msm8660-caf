@@ -118,6 +118,7 @@
 #include <mach/restart.h>
 #include <mach/cable_detect.h>
 #include <linux/msm_tsens.h>
+#include "board-storage-common-a.h"
 
 #include "board-shooter.h"
 #include "devices.h"
@@ -2220,7 +2221,7 @@ static struct platform_device *hdmi_devices[] __initdata = {
 static struct android_pmem_platform_data android_pmem_smipool_pdata = {
 	.name		= "pmem_smipool",
 	.allocator_type	= PMEM_ALLOCATORTYPE_BITMAP,
-	.cached		= 1,
+	.cached		= 0,
 	.memory_type	= MEMTYPE_SMI,
 	.request_region	= pmem_request_smi_region,
 	.release_region	= pmem_release_smi_region,
@@ -3769,11 +3770,11 @@ static struct memtype_reserve msm8x60_reserve_table[] __initdata = {
 		.limit	= USER_SMI_SIZE,
 		.flags	= MEMTYPE_FLAGS_FIXED,
 	},
-        [MEMTYPE_SMI_ION] = {
-                .start  =  MSM_ION_SMI_BASE,
-                .limit  =  MSM_ION_SMI_SIZE,
-                .flags  =  MEMTYPE_FLAGS_FIXED,
-        },
+	[MEMTYPE_SMI_ION] = {
+		.start  =  MSM_SMI_BASE,
+		.limit  =  MSM_SMI_SIZE,
+		.flags  =  MEMTYPE_FLAGS_FIXED,
+	},
 	[MEMTYPE_EBI0] = {
 		.flags	= MEMTYPE_FLAGS_1M_ALIGN,
 	},
@@ -3822,19 +3823,18 @@ static void __init reserve_pmem_memory(void)
 #ifdef CONFIG_ION_MSM
 static void __init reserve_ion_memory(void)
 {
-  int ret;
+	int ret;
 
-  ret = memblock_remove(MSM_ION_SF_BASE, MSM_ION_SF_SIZE);
-  BUG_ON(ret);
+	ret = memblock_remove(MSM_PMEM_ADSP_BASE, MSM_PMEM_ADSP_SIZE);
+	BUG_ON(ret);
 }
 #endif
+
 static void __init reserve_mdp_memory(void)
 {
  
 	shooter_mdp_writeback(msm8x60_reserve_table);
 }
- 
-//static void __init reserve_mdp_memory(void); 
 
 static void __init msm8x60_calculate_reserve_sizes(void)
 {
@@ -5934,6 +5934,7 @@ static struct mmc_platform_data msm8x60_sdc1_data = {
 	.msmsdcc_fmax	= 48000000,
 	.nonremovable	= 1,
 	.pclk_src_dfab	= 1,
+	.msm_bus_voting_data = &sps_to_ddr_bus_voting_data,
 };
 #endif
 
@@ -5950,6 +5951,7 @@ static struct mmc_platform_data msm8x60_sdc2_data = {
 	.nonremovable	= 0,
 	.pclk_src_dfab  = 1,
 	.register_status_notify = sdc2_register_status_notify,
+	.msm_bus_voting_data = &sps_to_ddr_bus_voting_data,
 };
 #endif
 #endif
@@ -5975,6 +5977,7 @@ static struct mmc_platform_data msm8x60_sdc3_data = {
 	.msmsdcc_fmax	= 48000000,
 	.nonremovable	= 0,
 	.pclk_src_dfab  = 1,
+	.msm_bus_voting_data = &sps_to_ddr_bus_voting_data,
 };
 #endif
 
@@ -5990,6 +5993,7 @@ static struct mmc_platform_data msm8x60_sdc5_data = {
 	.nonremovable	= 0,
 	.pclk_src_dfab  = 1,
 	.register_status_notify = sdc5_register_status_notify,
+	.msm_bus_voting_data = &sps_to_ddr_bus_voting_data,
 };
 #endif
 
