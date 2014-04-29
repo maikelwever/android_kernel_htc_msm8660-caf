@@ -29,6 +29,10 @@
 
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_SWEEP2WAKE
 #include <linux/atmel_qt602240.h>
+#else
+#ifdef CONFIG_TOUCHSCREEN_CYPRESS_SWEEP2WAKE
+#include <linux/cy8c_tma_ts.h>
+#endif
 #endif
 
 #ifdef CONFIG_HTC_HEADSET_MISC
