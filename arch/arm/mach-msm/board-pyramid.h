@@ -88,8 +88,11 @@
 
 #define GPIO_LCD_TE        (28)
 /* Audio */
-#define PYRAMID_AUD_CODEC_RST        (67)
-
+#define PYRAMID_AUD_CODEC_RST		(67)
+#define PYRAMID_AUD_CDC_LDO_SEL		(116)
+#define PYRAMID_AUD_MIC_SEL		PMGPIO(14)
+#define PYRAMID_AUD_SPK_ENO		PMGPIO(19)
+#define PYRAMID_AUD_HANDSET_ENO		PMGPIO(18)
 /* BT */
 #define PYRAMID_GPIO_BT_HOST_WAKE      (45)
 #define PYRAMID_GPIO_BT_UART1_TX       (53)
