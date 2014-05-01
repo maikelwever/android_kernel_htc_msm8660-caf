@@ -14,20 +14,22 @@
  */
 
 #include <linux/android_pmem.h>
-#include <mach/gpio.h>
 #include <linux/mfd/pmic8058.h>
 #include <linux/mfd/marimba.h>
 #include <linux/delay.h>
 #include <linux/pmic8058-othc.h>
 #include <linux/spi/spi_aic3254.h>
 
+#include <mach/gpio.h>
 #include <mach/dal.h>
 #include <mach/tpa2051d3.h>
 #include <mach/qdsp6v3/snddev_icodec.h>
 #include <mach/qdsp6v3/snddev_ecodec.h>
 #include <mach/qdsp6v3/snddev_hdmi.h>
+#include <mach/qdsp6v3/apr_audio.h>
+#include <mach/qdsp6v3/q6asm.h>
 #include <mach/htc_acoustic_8x60.h>
-#include "board-pyramid.h"
+
 #include "board-pyramid-audio-data.h"
 #include <mach/qdsp6v3/audio_dev_ctl.h>
 
@@ -35,23 +37,23 @@ static struct mutex bt_sco_lock;
 static struct mutex mic_lock;
 static int curr_rx_mode;
 static atomic_t aic3254_ctl = ATOMIC_INIT(0);
+static atomic_t q6_effect_mode = ATOMIC_INIT(-1);
 
 #define BIT_SPEAKER	(1 << 0)
 #define BIT_HEADSET	(1 << 1)
 #define BIT_RECEIVER	(1 << 2)
 #define BIT_FM_SPK	(1 << 3)
 #define BIT_FM_HS	(1 << 4)
+#define PYRAMID_AUD_CODEC_RST        (67)
+#define PYRAMID_AUD_HP_EN          PMGPIO(18)
+#define PYRAMID_AUD_MIC_SEL        PMGPIO(26)
 #define PM8058_GPIO_BASE			NR_MSM_GPIOS
 #define PM8058_GPIO_PM_TO_SYS(pm_gpio)		(pm_gpio + PM8058_GPIO_BASE)
+#define PMGPIO(x) (x-1)
 void pyramid_snddev_bmic_pamp_on(int en);
-static uint32_t msm_snddev_gpio[] = {
-	GPIO_CFG(108, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-	GPIO_CFG(109, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-	GPIO_CFG(110, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-};
 static uint32_t msm_aic3254_reset_gpio[] = {
-	GPIO_CFG(PYRAMID_AUD_CODEC_RST, 0,
-		GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+	GPIO_CFG(PYRAMID_AUD_CODEC_RST, 0, GPIO_CFG_OUTPUT,
+		GPIO_CFG_PULL_UP, GPIO_CFG_8MA),
 };
 
 void pyramid_snddev_poweramp_on(int en)
@@ -315,40 +317,44 @@ int pyramid_support_back_mic(void)
 	return 1;
 }
 
+void pyramid_get_acoustic_tables(struct acoustic_tables *tb)
+{
+	switch (system_rev) {
+	case 0:
+	case 1:
+		strcpy(tb->tpa2051, "TPA2051_CFG.csv");
+		break;
+	case 2:
+		strcpy(tb->tpa2051, "TPA2051_CFG_XC.csv");
+		break;
+	default:
+		strcpy(tb->tpa2051, "TPA2051_CFG_XC.csv");
+		break;
+	}
+}
+
+int pyramid_support_beats(void)
+{
+	/* this means HW support 1V for beats */
+	/* PCB ID is defined by HW revision
+	 * [0] raised means support 1V headset
+	 * [7-4] set as "1000" stands for PVT device */
+	if (((system_rev&0x1) == 0x1) && ((system_rev>>4&0xF) == 0x8))
+		return 1;
+	else
+		return 0;
+}
+
+void pyramid_enable_beats(int en)
+{
+	pr_aud_info("%s: %d\n", __func__, en);
+	set_beats_on(en);
+}
+
 int pyramid_is_msm_i2s_slave(void)
 {
 	/* 1 - CPU slave, 0 - CPU master */
 	return 1;
-}
-
-void pyramid_spibus_enable(int en)
-{
-	uint32_t msm_spi_gpio_on[] = {
-		GPIO_CFG(pyramid_SPI_DO,  1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-		GPIO_CFG(pyramid_SPI_DI,  1, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
-		GPIO_CFG(pyramid_SPI_CS,  1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-		GPIO_CFG(pyramid_SPI_CLK, 1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-	};
-
-	uint32_t msm_spi_gpio_off[] = {
-		GPIO_CFG(pyramid_SPI_DO,  1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-		GPIO_CFG(pyramid_SPI_DI,  0, GPIO_CFG_INPUT, GPIO_CFG_PULL_DOWN, GPIO_CFG_2MA),
-		GPIO_CFG(pyramid_SPI_CS,  1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-		GPIO_CFG(pyramid_SPI_CLK, 1, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-	};
-	pr_debug("%s %d\n", __func__, en);
-	if (en) {
-		gpio_tlmm_config(msm_spi_gpio_on[0], GPIO_CFG_ENABLE);
-		gpio_tlmm_config(msm_spi_gpio_on[1], GPIO_CFG_ENABLE);
-		gpio_tlmm_config(msm_spi_gpio_on[2], GPIO_CFG_ENABLE);
-		gpio_tlmm_config(msm_spi_gpio_on[3], GPIO_CFG_ENABLE);
-	} else {
-		gpio_tlmm_config(msm_spi_gpio_off[0], GPIO_CFG_DISABLE);
-		gpio_tlmm_config(msm_spi_gpio_off[1], GPIO_CFG_DISABLE);
-		gpio_tlmm_config(msm_spi_gpio_off[2], GPIO_CFG_DISABLE);
-		gpio_tlmm_config(msm_spi_gpio_off[3], GPIO_CFG_DISABLE);
-	}
-	mdelay(1);
 }
 
 void pyramid_reset_3254(void)
@@ -359,11 +365,18 @@ void pyramid_reset_3254(void)
 	gpio_set_value(PYRAMID_AUD_CODEC_RST, 1);
 }
 
-void pyramid_get_acoustic_tables(struct acoustic_tables *tb)
+void pyramid_set_q6_effect_mode(int mode)
 {
-	strcpy(tb->aic3254,	"IOTable.txt\0");
+	pr_aud_info("%s: mode %d\n", __func__, mode);
+	atomic_set(&q6_effect_mode, mode);
 }
 
+int pyramid_get_q6_effect_mode(void)
+{
+	int mode = atomic_read(&q6_effect_mode);
+	pr_aud_info("%s: mode %d\n", __func__, mode);
+	return mode;
+}
 
 static struct q6v2audio_analog_ops ops = {
 	.speaker_enable	        = pyramid_snddev_poweramp_on,
@@ -392,7 +405,6 @@ static struct q6v2audio_ecodec_ops eops = {
 static struct aic3254_ctl_ops cops = {
 	.rx_amp_enable        = pyramid_rx_amp_enable,
 	.reset_3254           = pyramid_reset_3254,
-	.spibus_enable        = pyramid_spibus_enable,
 	.lb_dsp_init          = &LOOPBACK_DSP_INIT_PARAM,
 	.lb_receiver_imic     = &LOOPBACK_Receiver_IMIC_PARAM,
 	.lb_speaker_imic      = &LOOPBACK_Speaker_IMIC_PARAM,
@@ -407,6 +419,9 @@ static struct acoustic_ops acoustic = {
 	.support_aic3254 = pyramid_support_aic3254,
 	.support_back_mic = pyramid_support_back_mic,
 	.get_acoustic_tables = pyramid_get_acoustic_tables,
+	.support_beats = pyramid_support_beats,
+	.enable_beats = pyramid_enable_beats,
+	.set_q6_effect = pyramid_set_q6_effect_mode,
 };
 
 void pyramid_aic3254_set_mode(int config, int mode)
@@ -419,34 +434,30 @@ static struct q6v2audio_aic3254_ops aops = {
        .aic3254_set_mode = pyramid_aic3254_set_mode,
 };
 
+static struct q6asm_ops qops = {
+	.get_q6_effect = pyramid_get_q6_effect_mode,
+};
+
 void __init pyramid_audio_init(void)
 {
-
 	mutex_init(&bt_sco_lock);
 	mutex_init(&mic_lock);
 
 #ifdef CONFIG_MSM8X60_AUDIO
 	pr_aud_info("%s\n", __func__);
-
 	htc_8x60_register_analog_ops(&ops);
 	htc_8x60_register_icodec_ops(&iops);
 	htc_8x60_register_ecodec_ops(&eops);
 	acoustic_register_ops(&acoustic);
 	htc_8x60_register_aic3254_ops(&aops);
+	htc_8x60_register_q6asm_ops(&qops);
 	msm_set_voc_freq(8000, 8000);
 #endif
+
 	aic3254_register_ctl_ops(&cops);
 
 	/* PMIC GPIO Init (See board-pyramid.c) */
 
 	/* Reset AIC3254 */
 	pyramid_reset_3254();
-	gpio_tlmm_config(
-		GPIO_CFG(PYRAMID_AUD_CDC_LDO_SEL, 0, GPIO_CFG_OUTPUT,
-			GPIO_CFG_NO_PULL, GPIO_CFG_2MA), GPIO_CFG_DISABLE);
-	gpio_tlmm_config(msm_snddev_gpio[0], GPIO_CFG_DISABLE);
-	gpio_tlmm_config(msm_snddev_gpio[1], GPIO_CFG_DISABLE);
-	gpio_tlmm_config(msm_snddev_gpio[2], GPIO_CFG_DISABLE);
-
 }
-
