@@ -30,8 +30,9 @@
 
 #define MSM_FB_SIZE           roundup((960 * ALIGN(540, 32) * 4 * 3), 4096)
 #define MSM_SMI_SIZE          0x3900000
-#define KERNEL_SMI_SIZE       0xC00000
+#define KERNEL_SMI_SIZE       0xE00000
 #define USER_SMI_SIZE         (MSM_SMI_SIZE - KERNEL_SMI_SIZE)
+#define MSM_PMEM_SMIPOOL_SIZE USER_SMI_SIZE
 #define MSM_PMEM_ADSP_SIZE    0x1800000
 #define MSM_ION_WB_SIZE       0x300000
 #define MSM_PMEM_AUDIO_SIZE   0x300000
