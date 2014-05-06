@@ -222,17 +222,19 @@ static struct msm_bus_vectors dtv_bus_init_vectors[] = {
 };
 
 static struct msm_bus_vectors dtv_bus_def_vectors[] = {
+	 */
 	{
 		.src = MSM_BUS_MASTER_MDP_PORT0,
 		.dst = MSM_BUS_SLAVE_SMI,
-		.ab = 566092800 *2,
-		.ib = 707616000 *2,
+		.ab = 252979200,
+		.ib = 505958400,
 	},
+	/* Master and slaves can be from different fabrics */
 	{
 		.src = MSM_BUS_MASTER_MDP_PORT0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 566092800 *2,
-		.ib = 707616000 *2,
+		.ab = 421632000,
+		.ib = 843264000,
 	},
 };
 
