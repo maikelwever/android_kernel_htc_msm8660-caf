@@ -51,11 +51,7 @@ static int msm_fb_detect_panel(const char *name)
 static struct resource msm_fb_resources[] = {
 	{
 		.flags  = IORESOURCE_DMA,
-	},
-	/* for overlay write back operation */
-	{
-		.flags  = IORESOURCE_DMA,
-	},
+	}
 };
 
 static struct msm_fb_platform_data msm_fb_pdata = {
@@ -75,10 +71,10 @@ void __init holiday_allocate_fb_region(void)
 	unsigned long size;
 
 	size = MSM_FB_SIZE;
-  msm_fb_resources[0].start = MSM_FB_BASE;
+	msm_fb_resources[0].start = MSM_FB_BASE;
 	msm_fb_resources[0].end = msm_fb_resources[0].start + size - 1;
-  pr_info("allocating %lu bytes at 0x%p (0x%lx physical) for fb\n",
-    size, __va(MSM_FB_BASE), (unsigned long) MSM_FB_BASE);
+	pr_info("allocating %lu bytes at 0x%p (0x%lx physical) for fb\n",
+		size, __va(MSM_FB_BASE), (unsigned long) MSM_FB_BASE);
 }
 
 #ifdef CONFIG_MSM_BUS_SCALING
@@ -222,19 +218,17 @@ static struct msm_bus_vectors dtv_bus_init_vectors[] = {
 };
 
 static struct msm_bus_vectors dtv_bus_def_vectors[] = {
-	 */
 	{
 		.src = MSM_BUS_MASTER_MDP_PORT0,
 		.dst = MSM_BUS_SLAVE_SMI,
-		.ab = 252979200,
-		.ib = 505958400,
+		.ab = 566092800 *2,
+		.ib = 707616000 *2,
 	},
-	/* Master and slaves can be from different fabrics */
 	{
 		.src = MSM_BUS_MASTER_MDP_PORT0,
 		.dst = MSM_BUS_SLAVE_EBI_CH0,
-		.ab = 421632000,
-		.ib = 843264000,
+		.ab = 566092800 *2,
+		.ib = 707616000 *2,
 	},
 };
 
