@@ -143,6 +143,7 @@
 #define HOLIDAY_TORCH_EN			 (30)
 
 #ifdef CONFIG_FB_MSM_HDMI_MHL
+
 /* MHL */
 #define HOLIDAY_GPIO_MHL_RST_N   		(2)
 #define HOLIDAY_GPIO_MHL_INTR_N  		(50)
@@ -150,6 +151,10 @@
 #define HOLIDAY_GPIO_MHL_SDA			(171)
 #define HOLIDAY_GPIO_MHL_HPD			(172)
 #endif
+
+#define HOLIDAY_GPIO_MHL_RESET        (70)
+#define HOLIDAY_GPIO_MHL_INT        (71)
+#define HOLIDAY_GPIO_MHL_USB_SWITCH        (99)
 
 /* Accessory */
 #define HOLIDAY_GPIO_AUD_HP_DET		(31)

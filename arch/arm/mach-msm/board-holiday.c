@@ -1265,6 +1265,10 @@ static struct msm_hsusb_gadget_platform_data msm_gadget_pdata = {
 
 #ifdef CONFIG_USB_G_ANDROID
 
+static uint32_t mhl_usb_switch_ouput_table[] = {
+	GPIO_CFG(HOLIDAY_GPIO_MHL_USB_SWITCH, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_4MA),
+};
+
 static struct pm8xxx_mpp_init_info usb_mpp_init_configs[] = {
 	PM8XXX_MPP_INIT(10, D_INPUT, PM8058_MPP_DIG_LEVEL_S3, DIN_TO_INT),
 	PM8XXX_MPP_INIT(11, D_BI_DIR, PM8058_MPP_DIG_LEVEL_S3, BI_PULLUP_10KOHM),
@@ -1338,7 +1342,7 @@ static struct cable_detect_platform_data cable_detect_pdata = {
 	.vbus_mpp_irq		= (PM8058_IRQ_BASE + PM8058_CBLPWR_IRQ),
 	.detect_type		= CABLE_TYPE_PMIC_ADC,
 	.usb_id_pin_gpio	= HOLIDAY_GPIO_USB_ID,
-	.mhl_reset_gpio		= HOLIDAY_GPIO_MHL_RST_N,
+	.mhl_reset_gpio		= HOLIDAY_GPIO_MHL_RESET,
 	.usb_dpdn_switch	= holiday_usb_dpdn_switch,
 	.mpp_data = {
 		.usbid_mpp	=  PM8058_MPP_PM_TO_SYS(XOADC_MPP_4),
@@ -1976,6 +1980,11 @@ static void mhl_sii9234_1v2_power(bool enable)
 }
 
 #ifdef CONFIG_FB_MSM_HDMI_MHL_SII9234
+static uint32_t mhl_gpio_table[] = {
+	GPIO_CFG(HOLIDAY_GPIO_MHL_RESET, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
+	GPIO_CFG(HOLIDAY_GPIO_MHL_INT, 0, GPIO_CFG_INPUT, GPIO_CFG_PULL_UP, GPIO_CFG_2MA),
+};
+
 static int mhl_sii9234_power(int on)
 {
 	int rc = 0;
@@ -2461,6 +2470,8 @@ static struct platform_device android_pmem_smipool_device = {
 	.dev	= { .platform_data = &android_pmem_smipool_pdata },
 };
 #endif
+
+
 
 static struct platform_device ram_console_device = {
 	.name		= "ram_console",
