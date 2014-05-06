@@ -7177,7 +7177,7 @@ static void __init msm8x60_init(struct msm_board_data *board_data)
 
 	platform_add_devices(charm_devices, ARRAY_SIZE(charm_devices));
 
-	holiday_init_panel(msm_fb_resources, ARRAY_SIZE(msm_fb_resources));
+        holiday_init_fb();
 
 	fixup_i2c_configs();
 	register_i2c_devices();
