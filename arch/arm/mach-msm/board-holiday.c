@@ -1320,13 +1320,11 @@ static void holiday_usb_dpdn_switch(int path)
 		int polarity = 1; /* high = mhl */
 		int mhl = (path == PATH_MHL);
 
-		config_gpio_table(mhl_usb_switch_ouput_table,
-				ARRAY_SIZE(mhl_usb_switch_ouput_table));
+		gpio_tlmm_config(mhl_usb_switch_ouput_table[0], 0);
 
 		pr_info("[CABLE] %s: Set %s path\n", __func__, mhl ? "MHL" : "USB");
 		gpio_set_value(HOLIDAY_GPIO_MHL_USB_SEL, (mhl ^ !polarity) ? 1 : 0);
 		break;
-	}
 	}
 
 #ifdef CONFIG_FB_MSM_HDMI_MHL
