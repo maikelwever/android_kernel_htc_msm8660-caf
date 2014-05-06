@@ -1311,20 +1311,6 @@ static void config_holiday_usb_id_gpios(bool output)
 	}
 }
 
-static uint32_t mhl_reset_pin_ouput_table[] = {
-	GPIO_CFG(HOLIDAY_GPIO_MHL_RST_N, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-};
-
-static uint32_t mhl_usb_switch_ouput_table[] = {
-	GPIO_CFG(HOLIDAY_GPIO_MHL_USB_SEL, 0, GPIO_CFG_OUTPUT, GPIO_CFG_NO_PULL, GPIO_CFG_2MA),
-};
-
-void config_holiday_mhl_gpios(void)
-{
-	config_gpio_table(mhl_usb_switch_ouput_table, ARRAY_SIZE(mhl_usb_switch_ouput_table));
-	config_gpio_table(mhl_reset_pin_ouput_table, ARRAY_SIZE(mhl_reset_pin_ouput_table));
-}
-
 static void holiday_usb_dpdn_switch(int path)
 {
 	switch (path) {
