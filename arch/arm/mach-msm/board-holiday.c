@@ -5378,8 +5378,6 @@ static struct mpu3050_platform_data mpu3050_data = {
 		.orientation = { -1, 0, 0, 0, 1, 0, 0, 0, -1 },
 	},
 
-	},
-
 	.compass = {
 		.get_slave_descr = get_compass_slave_descr,
 		.adapt_num = MSM_GSBI12_QUP_I2C_BUS_ID, /* The i2c bus to which the mpu device is connected */
