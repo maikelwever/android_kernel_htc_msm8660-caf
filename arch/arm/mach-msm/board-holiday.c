@@ -1324,17 +1324,17 @@ static void holiday_usb_dpdn_switch(int path)
 		int polarity = 1; /* high = mhl */
 		int mhl = (path == PATH_MHL);
 
-		config_gpio_table(mhl_usb_switch_ouput_table,
-				ARRAY_SIZE(mhl_usb_switch_ouput_table));
+		gpio_tlmm_config(mhl_usb_switch_ouput_table[0], 0);
 
 		pr_info("[CABLE] %s: Set %s path\n", __func__, mhl ? "MHL" : "USB");
-		gpio_set_value(HOLIDAY_GPIO_MHL_USB_SEL, (mhl ^ !polarity) ? 1 : 0);
+		gpio_set_value(HOLIDAY_GPIO_MHL_USB_SWITCH, (mhl ^ !polarity) ? 1 : 0);
 		break;
 	}
+	}
 
-#ifdef CONFIG_FB_MSM_HDMI_MHL
-	sii9234_change_usb_owner((path == PATH_MHL) ? 1 : 0);
-#endif
+	#ifdef CONFIG_FB_MSM_HDMI_MHL
+	sii9234_change_usb_owner((path == PATH_MHL)?1:0);
+	#endif
 }
 
 static struct cable_detect_platform_data cable_detect_pdata = {
@@ -1472,7 +1472,7 @@ static void holiday_add_usb_devices(void)
 	android_usb_pdata.products[0].product_id =
 		android_usb_pdata.product_id;
 
-	config_holiday_mhl_gpios();
+	//config_holiday_mhl_gpios();
 
 	/* diag bit set */
 	if (get_radio_flag() & 0x20000) {
@@ -2471,7 +2471,6 @@ static struct platform_device android_pmem_smipool_device = {
 	.dev	= { .platform_data = &android_pmem_smipool_pdata },
 };
 #endif
-
 
 
 static struct platform_device ram_console_device = {
