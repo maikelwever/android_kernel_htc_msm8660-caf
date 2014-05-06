@@ -36,6 +36,7 @@
 #include <linux/cm3628.h>
 #include <linux/mpu.h>
 #include <linux/proc_fs.h>
+#include <linux/memblock.h>
 
 #include <linux/msm-charger.h>
 #include <linux/i2c.h>
@@ -2241,8 +2242,6 @@ static int __init pmem_audio_size_setup(char *p)
 early_param("pmem_audio_size", pmem_audio_size_setup);
 #endif
 
-};
-
 #ifdef CONFIG_ANDROID_PMEM
 static struct android_pmem_platform_data android_pmem_adsp_pdata = {
 	.name		= "pmem_adsp",
@@ -2267,6 +2266,7 @@ static struct platform_device android_pmem_audio_device = {
 	.id	= 4,
 	.dev	= { .platform_data = &android_pmem_audio_pdata },
 };
+#endif
 
 #define PMEM_BUS_WIDTH(_bw) \
 	{ \
@@ -4505,7 +4505,6 @@ static void __init reserve_pmem_memory(void)
 #endif
 }
 
-#ifdef CONFIG_ION_MSM
 static void __init reserve_ion_memory(void)
 {
 	int ret;
@@ -4513,7 +4512,7 @@ static void __init reserve_ion_memory(void)
 	ret = memblock_remove(MSM_PMEM_ADSP_BASE, MSM_PMEM_ADSP_SIZE);
 	BUG_ON(ret);
 }
-#endif
+
 
 static void __init msm8x60_calculate_reserve_sizes(void)
 {
@@ -5383,25 +5382,30 @@ static struct i2c_board_info i2c_CM3628_devices[] = {
 
 static struct mpu3050_platform_data mpu3050_data = {
 	.int_config = 0x10,
-	.orientation = { -1, 0, 0, 0, 1, 0, 0, 0, -1 },
+	.orientation = { -1, 0, 0,
+					0, 1, 0,
+					0, 0, -1 },
 	.level_shifter = 0,
 
 	.accel = {
 		.get_slave_descr = get_accel_slave_descr,
-		.adapt_num = MSM_GSBI12_QUP_I2C_BUS_ID, /* The i2c bus to which the mpu device is connected */
+		.adapt_num = MSM_GSBI10_QUP_I2C_BUS_ID, /* The i2c bus to which the mpu device is connected */
 		.bus = EXT_SLAVE_BUS_SECONDARY,
-		.address = 0x30 >> 1,
-		.orientation = { -1, 0, 0, 0, 1, 0, 0, 0, -1 },
-	},
+		.address = 0x70 >> 1,
+			.orientation = { -1, 0, 0,
+							0, -1, 0,
+							0, 0, 1 },
 
 	},
 
 	.compass = {
 		.get_slave_descr = get_compass_slave_descr,
-		.adapt_num = MSM_GSBI12_QUP_I2C_BUS_ID, /* The i2c bus to which the mpu device is connected */
+		.adapt_num = MSM_GSBI10_QUP_I2C_BUS_ID, /* The i2c bus to which the mpu device is connected */
 		.bus = EXT_SLAVE_BUS_PRIMARY,
-		.address = 0x1A >> 1,
-		.orientation = { -1, 0, 0, 0, 1, 0, 0, 0, -1 },
+		.address = 0x18 >> 1,
+			.orientation = { -1, 0, 0,
+							0, 1, 0,
+							0, 0, -1 },
 	},
 };
 
