@@ -135,6 +135,10 @@ struct audio_client {
 	uint64_t         time_stamp;
 };
 
+struct q6asm_ops {
+	int (*get_q6_effect) (void);
+};
+
 void q6asm_audio_client_free(struct audio_client *ac);
 
 struct audio_client *q6asm_audio_client_alloc(app_cb cb, void *priv);
@@ -245,6 +249,10 @@ int q6asm_set_volume(struct audio_client *ac, int volume);
 int q6asm_set_softpause(struct audio_client *ac,
 			struct asm_softpause_params *param);
 
+/* Set Softvolume Params */
+int q6asm_set_softvolume(struct audio_client *ac,
+			struct asm_softvolume_params *param);
+
 /* Send left-right channel gain */
 int q6asm_set_lrgain(struct audio_client *ac, int left_gain, int right_gain);
 
@@ -261,4 +269,10 @@ int q6asm_set_io_mode(struct audio_client *ac, uint32_t mode);
 int q6asm_get_apr_service_id(int session_id);
 #endif
 
+/* Enable Q6 Effect Command */
+int q6asm_enable_effect(struct audio_client *ac, uint32_t module_id,
+			uint32_t param_id, uint32_t payload_size,
+			void *payload);
+
+void htc_8x60_register_q6asm_ops(struct q6asm_ops *ops);
 #endif /* __Q6_ASM_H__ */

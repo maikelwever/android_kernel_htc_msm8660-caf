@@ -70,6 +70,13 @@ struct asm_mmap {
 };
 
 static struct asm_mmap this_mmap;
+static struct q6asm_ops default_qops;
+static struct q6asm_ops *qops = &default_qops;
+
+void htc_8x60_register_q6asm_ops(struct q6asm_ops *ops)
+{
+	qops = ops;
+}
 
 static int q6asm_session_alloc(struct audio_client *ac)
 {
@@ -881,6 +888,16 @@ int q6asm_open_write(struct audio_client *ac, uint32_t format)
 	open.sink_endpoint = ASM_END_POINT_DEVICE_MATRIX;
 	open.stream_handle = 0x00;
 	open.post_proc_top = DEFAULT_POPP_TOPOLOGY;
+
+	/* change to HTC_POPP_TOPOLOGY to support Q6 effect */
+	if (qops->get_q6_effect) {
+		int mode = qops->get_q6_effect();
+		if (mode == 0) { /* POPP */
+			pr_aud_info("%s: change to HTC_POPP_TOPOLOGY\n",
+				    __func__);
+			open.post_proc_top = HTC_POPP_TOPOLOGY;
+		}
+	}
 
 	switch (format) {
 	case FORMAT_LINEAR_PCM:
@@ -1809,6 +1826,63 @@ fail_cmd:
 	return rc;
 }
 
+int q6asm_enable_effect(struct audio_client *ac, uint32_t module_id,
+			uint32_t param_id, uint32_t payload_size,
+			void *payload)
+{
+	void *q6_cmd = NULL;
+	void *data = NULL;
+	struct asm_pp_params_command *cmd = NULL;
+	int sz = 0;
+	int rc  = 0;
+
+	pr_aud_info("%s: param_id 0x%x, payload size %d\n",
+			__func__, param_id, payload_size);
+	sz = sizeof(struct asm_pp_params_command) +
+		+ payload_size;
+	q6_cmd = kzalloc(sz, GFP_KERNEL);
+	if (q6_cmd == NULL) {
+		pr_aud_err("%s[%d]: Mem alloc failed\n", __func__, ac->session);
+		rc = -EINVAL;
+		return rc;
+	}
+	cmd = (struct asm_pp_params_command *)q6_cmd;
+	q6asm_add_hdr_async(ac, &cmd->hdr, sz, TRUE);
+	cmd->hdr.opcode = ASM_STREAM_CMD_SET_PP_PARAMS;
+	cmd->payload = NULL;
+	cmd->payload_size = sizeof(struct  asm_pp_param_data_hdr) +
+				payload_size;
+	cmd->params.module_id = module_id;
+	cmd->params.param_id = param_id;
+	cmd->params.param_size = payload_size;
+	cmd->params.reserved = 0;
+
+	data = (u8 *)(q6_cmd + sizeof(struct asm_pp_params_command));
+	memcpy(data, payload, payload_size);
+
+	rc = apr_send_pkt(ac->apr, (uint32_t *) q6_cmd);
+	if (rc < 0) {
+		pr_aud_err("%s: Enable Q6 effect Command failed\n", __func__);
+		rc = -EINVAL;
+		goto fail_cmd;
+	}
+
+	rc = wait_event_timeout(ac->cmd_wait,
+			(atomic_read(&ac->cmd_state) == 0), 5*HZ);
+	if (!rc) {
+		pr_aud_err("%s: timeout in sending command to apr\n",
+			__func__);
+		rc = -EINVAL;
+		goto fail_cmd;
+	}
+	rc = 0;
+
+fail_cmd:
+	kfree(q6_cmd);
+	pr_aud_info("%s: return %d\n", __func__, rc);
+	return rc;
+}
+
 int q6asm_set_volume(struct audio_client *ac, int volume)
 {
 	void *vol_cmd = NULL;
@@ -1923,6 +1997,65 @@ fail_cmd:
 	return rc;
 }
 
+int q6asm_set_softvolume(struct audio_client *ac,
+			struct asm_softvolume_params *softvol_param)
+{
+	void *vol_cmd = NULL;
+	void *payload = NULL;
+	struct asm_pp_params_command *cmd = NULL;
+	struct asm_softvolume_params *params = NULL;
+	int sz = 0;
+	int rc  = 0;
+
+	sz = sizeof(struct asm_pp_params_command) +
+		+ sizeof(struct asm_softvolume_params);
+	vol_cmd = kzalloc(sz, GFP_KERNEL);
+	if (vol_cmd == NULL) {
+		pr_err("%s[%d]: Mem alloc failed\n", __func__, ac->session);
+		rc = -EINVAL;
+		return rc;
+	}
+	cmd = (struct asm_pp_params_command *)vol_cmd;
+	q6asm_add_hdr_async(ac, &cmd->hdr, sz, TRUE);
+	cmd->hdr.opcode = ASM_STREAM_CMD_SET_PP_PARAMS;
+	cmd->payload = NULL;
+	cmd->payload_size = sizeof(struct  asm_pp_param_data_hdr) +
+				sizeof(struct asm_softvolume_params);
+	cmd->params.module_id = VOLUME_CONTROL_MODULE_ID;
+	cmd->params.param_id = SOFT_VOLUME_PARAM_ID;
+	cmd->params.param_size = sizeof(struct asm_softvolume_params);
+	cmd->params.reserved = 0;
+
+	payload = (u8 *)(vol_cmd + sizeof(struct asm_pp_params_command));
+	params = (struct asm_softvolume_params *)payload;
+
+	params->period = softvol_param->period;
+	params->step = softvol_param->step;
+	params->rampingcurve = softvol_param->rampingcurve;
+	pr_debug("%s: soft Volume Command: period = %d,"
+			 "step = %d, curve = %d\n", __func__, params->period,
+			 params->step, params->rampingcurve);
+	rc = apr_send_pkt(ac->apr, (uint32_t *) vol_cmd);
+	if (rc < 0) {
+		pr_err("%s: Volume Command(soft_volume) failed\n", __func__);
+		rc = -EINVAL;
+		goto fail_cmd;
+	}
+
+	rc = wait_event_timeout(ac->cmd_wait,
+			(atomic_read(&ac->cmd_state) == 0), 5*HZ);
+	if (!rc) {
+		pr_err("%s: timeout in sending volume command(soft_volume)"
+		       "to apr\n", __func__);
+		rc = -EINVAL;
+		goto fail_cmd;
+	}
+	rc = 0;
+fail_cmd:
+	kfree(vol_cmd);
+	return rc;
+}
+
 int q6asm_equalizer(struct audio_client *ac, void *eq)
 {
 	void *eq_cmd = NULL;
@@ -1997,7 +2130,8 @@ int q6asm_equalizer(struct audio_client *ac, void *eq)
 	}
 	rc = 0;
 fail_cmd:
-	kfree(eq_cmd);
+	if (eq_cmd != NULL)
+		kfree(eq_cmd);
 	return rc;
 }
 
