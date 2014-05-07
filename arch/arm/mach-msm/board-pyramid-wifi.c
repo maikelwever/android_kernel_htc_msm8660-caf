@@ -80,11 +80,7 @@ static struct resource pyramid_wifi_resources[] = {
 		.name		= "bcm4329_wlan_irq",
 		.start		= MSM_GPIO_TO_INT(PYRAMID_GPIO_WIFI_IRQ),
 		.end		= MSM_GPIO_TO_INT(PYRAMID_GPIO_WIFI_IRQ),
-#ifdef HW_OOB
 		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE,
-#else
-		.flags          = IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHEDGE,
-#endif
 	},
 };
 
