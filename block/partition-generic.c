@@ -9,7 +9,7 @@
  *  contained.
  */
 
-#include <mach/board_htc.h>
+#include <mach/board-ext-htc.h>
 #include <linux/init.h>
 #include <linux/module.h>
 #include <linux/fs.h>
