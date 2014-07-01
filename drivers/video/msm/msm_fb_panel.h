@@ -178,6 +178,7 @@ struct msm_panel_info {
 	__u32 frame_interval;
 	__u32 width;
 	__u32 height;
+
 	struct mddi_panel_info mddi;
 	struct lcd_panel_info lcd;
 	struct lcdc_panel_info lcdc;
