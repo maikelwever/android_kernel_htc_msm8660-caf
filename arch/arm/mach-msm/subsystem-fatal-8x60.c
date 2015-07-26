@@ -60,8 +60,11 @@ static void __iomem *q6_wakeup_intr;
 static void q6_fatal_fn(struct work_struct *work)
 {
 	pr_err("%s: Watchdog bite received from Q6!\n", MODULE_NAME);
-	subsystem_restart("lpass");
-	enable_irq(LPASS_Q6SS_WDOG_EXPIRED);
+    // This has been commented because I couldn't find a proper way
+    // to disable it. Device kept rebooting even though all was well.
+
+	// subsystem_restart("lpass");
+	// enable_irq(LPASS_Q6SS_WDOG_EXPIRED);
 }
 
 void send_q6_nmi(void)
